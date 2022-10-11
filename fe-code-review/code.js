@@ -50,7 +50,7 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
 
                 const sentStatus = {};
                 for (let i = 0; i < debtCollectors.length ; i++) {
-                    // Review: What's 10? Please Awoid magic numbers
+                    // Review: What's 10? Please avoid magic numbers
                     await db.updateStatus(requestID, 10+i, '');
                     const idCollector = debtCollectors[i].id;
                     const collectorName = debtCollectors[i].name;
