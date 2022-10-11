@@ -2,6 +2,7 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
     logInfo('POST /api/extract',req.body);
     logInfo('FILE=',req.file);
 
+    // Review: Please separate functionality and never write such long functions to make it easily reviewed and tested
     if (req.body) {
         const file = req.file;
         const requestID = req.body.requestID;
@@ -19,6 +20,7 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
 
             logDebug('CONFIG:', config.projects);
             if (project === 'inkasso' && config.projects.hasOwnProperty(project) && file) {
+                // Review: Remove unused variables.
                 const hashSum = crypto.createHash('sha256');
                 const fileHash = idUser;
                 const fileName = 'fullmakt';
@@ -35,7 +37,7 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
                 logDebug('DB UPLOAD:', ret);
 
                 await db.updateStatus(requestID, 5, '');
-
+                // Review: Remove unused variables.
                 let sent = true;
                 const debtCollectors = await db.getDebtCollectors();
                 logDebug('debtCollectors=', debtCollectors);
@@ -48,6 +50,7 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
 
                 const sentStatus = {};
                 for (let i = 0; i < debtCollectors.length ; i++) {
+                    // Review: What's 10? Please Awoid magic numbers
                     await db.updateStatus(requestID, 10+i, '');
                     const idCollector = debtCollectors[i].id;
                     const collectorName = debtCollectors[i].name;
@@ -64,13 +67,16 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
                     if (!!(await db.setUserRequestKey(requestKey, idUser))
                         && !!(await db.setUserCollectorRequestKey(requestKey, idUser, idCollector))) {
 
+                        // Review: Please separate functionality in named functions, instead writing comments
                         /* prepare email */
                         const sendConfig = {
                             sender: config.projects[project].email.sender,
                             replyTo: config.projects[project].email.replyTo,
+                            // Review: Add missing apostrophe
                             subject: 'Email subject,
                             templateId: config.projects[project].email.template.collector,
                             params: {
+                                // Review: Please separate such URL into variable for easy access, use DRY
                                 downloadUrl: `https://url.go/download?requestKey=${requestKey}&hash=${hash}`,
                                 uploadUrl: `https://url.go/upload?requestKey=${requestKey}&hash=${hash}`,
                                 confirmUrl: `https://url.go/confirm?requestKey=${requestKey}&hash=${hash}`
@@ -85,18 +91,21 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
                         } catch (e) {
                             logDebug('extract() setEmailLog error=', e);
                         }
-
+                        // Review: Please separate functionality in named functions, instead writing comments
                         /* send email */
+                        // Review: Please use early return here, w/o changing the DB
                         const resp = await email.send(sendConfig, config.projects[project].email.apiKey);
                         logDebug('extract() resp=', resp);
 
                         // update DB with result
                         await db.setUserCollectorRequestKeyRes(requestKey, idUser, idCollector, resp);
 
+                        // Review: Please use a curly brackets and apply the same code style everywhere
                         if (!sentStatus[collectorName])
                             sentStatus[collectorName] = {};
                         sentStatus[collectorName][collectorEmail] = resp;
 
+                        // Review: Please use early return here, w/o changing the DB
                         if (!resp) {
                             logError('extract() Sending email failed: ', resp);
                         }
@@ -107,6 +116,7 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
                 logDebug('FINAL SENT STATUS:');
                 console.dir(sentStatus, {depth: null});
 
+                // Review: Please, remove unused code
                 //if (!allSent)
                 //return res.status(500).json({requestID, message: 'Failed sending email'});
 
@@ -114,15 +124,18 @@ app.post('/api/extract', upload.single('file'), async (req, res) => {
 
                 /* prepare summary email */
                 const summaryConfig = {
+                    // Review: Please, remove unused code
                     //bcc: [{ email: 'tomas@inkassoregisteret.com', name: 'Tomas' }],
                     sender: config.projects[project].email.sender,
                     replyTo: config.projects[project].email.replyTo,
+                    // Review: Please, move strings to variables.
                     subject: 'Oppsummering Kravsforespørsel',
                     templateId: config.projects[project].email.template.summary,
                     params: {
                         collectors: sentStatus,
                     },
                     tags: ['summary'],
+                    // Review: Please, move email into variable or constant
                     to: [{ email: 'tomas@upscore.no' , name: 'Tomas' }], // FIXXX: config.projects[project].email.sender
                 };
                 logDebug('Summary config:', summaryConfig);
